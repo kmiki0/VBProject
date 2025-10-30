@@ -40,12 +40,6 @@ Public Class CustomerValidator
     Protected Overrides Sub ValidateCustomRules(fields() As String, result As RowValidationResult)
         ' 顧客コードのフォーマットチェック
         ValidateCustomerCodeFormat(fields, result)
-        
-        ' 支店コードのフォーマットチェック
-        ValidateBranchCodeFormat(fields, result)
-        
-        ' 電話番号のフォーマットチェック
-        ValidatePhoneNumberFormat(fields, result)
     End Sub
     
     ' 顧客コードのフォーマットチェック（例: "C"で始まる必要がある）
@@ -80,48 +74,4 @@ Public Class CustomerValidator
             })
         End If
     End Sub
-    
-    ' 支店コードのフォーマットチェック（例: 3桁の数字）
-    Private Sub ValidateBranchCodeFormat(fields() As String, result As RowValidationResult)
-        If fields.Length <= 1 OrElse String.IsNullOrWhiteSpace(fields(1)) Then
-            Return
-        End If
-        
-        Dim branchCode = fields(1)
-        
-        ' 数字のみかチェック
-        If Not Regex.IsMatch(branchCode, "^\d+$") Then
-            result.Errors.Add(New ValidationError With {
-                .LineNumber = result.LineNumber,
-                .ColumnIndex = 1,
-                .ColumnName = "支店コード",
-                .ErrorType = "形式",
-                .ErrorMessage = "支店コードは数字のみで入力してください",
-                .RawValue = branchCode
-            })
-        End If
-    End Sub
-    
-    ' 電話番号のフォーマットチェック（例: 03-1234-5678）
-    Private Sub ValidatePhoneNumberFormat(fields() As String, result As RowValidationResult)
-        If fields.Length <= 4 OrElse String.IsNullOrWhiteSpace(fields(4)) Then
-            Return  ' 空欄は許容（必須でない場合）
-        End If
-        
-        Dim phoneNumber = fields(4)
-        
-        ' ハイフン区切りの電話番号形式チェック（簡易版）
-        ' 例: 03-1234-5678, 090-1234-5678
-        If Not Regex.IsMatch(phoneNumber, "^\d{2,4}-\d{4}-\d{4}$") Then
-            result.Errors.Add(New ValidationError With {
-                .LineNumber = result.LineNumber,
-                .ColumnIndex = 4,
-                .ColumnName = "電話番号",
-                .ErrorType = "形式",
-                .ErrorMessage = "電話番号の形式が不正です（例: 03-1234-5678）",
-                .RawValue = phoneNumber
-            })
-        End If
-    End Sub
-    
 End Class

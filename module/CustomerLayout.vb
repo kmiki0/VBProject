@@ -1,4 +1,7 @@
-Public Enum CustomerColumns
+' ==========================================
+' 顧客マスタファイルのレイアウト定義
+' ==========================================
+Public Enum FileLayout
     顧客コード = 0
     支店コード = 1
     顧客名 = 2
@@ -9,16 +12,6 @@ Public Enum CustomerColumns
     削除フラグ = 7
 End Enum
 
-' ==========================================
-' CustomerLayout.vb
-' 顧客マスタファイルのレイアウト定義
-    ' 列インデックスは0始まり
-    ' キー項目: 顧客コード + 支店コード（エラーログに表示される）
-    ' 一意性制約: 顧客コード + 支店コードの組み合わせで重複チェック
-    ' 必須項目: 顧客コード、支店コード、顧客名
-    ' 桁数: 顧客コード10桁、顧客名は1〜50桁など
-    ' 日付: 登録日、更新日
-' ==========================================
 Public Class CustomerLayout
     
     ''' <summary>
@@ -28,29 +21,27 @@ Public Class CustomerLayout
         Return New FileDefinition With {
             .Name = "顧客マスタ",
             .OutputFileName = "customer",
+            .Delimiter = vbTab
+            .ExpectedColumnCount = 8,  
             .KeyColumns = {
-                New ColumnDefinition(CustomerColumns.顧客コード),
-                New ColumnDefinition(CustomerColumns.支店コード)
+                New ColumnDefinition(FileLayout.顧客コード),
+                New ColumnDefinition(FileLayout.支店コード)
             },
             .UniqueColumns = {
-                CustomerColumns.顧客コード,
-                CustomerColumns.支店コード
+                FileLayout.顧客コード,
+                FileLayout.支店コード
             },
             .RequiredColumns = {
-                New ColumnDefinition(CustomerColumns.顧客コード),
-                New ColumnDefinition(CustomerColumns.支店コード),
-                New ColumnDefinition(CustomerColumns.顧客名)
+                New ColumnDefinition(FileLayout.顧客コード),
+                New ColumnDefinition(FileLayout.支店コード),
+                New ColumnDefinition(FileLayout.顧客名)
             },
             .LengthRules = {
-                New LengthRule(CustomerColumns.顧客コード, 10),
-                New LengthRule(CustomerColumns.支店コード, 3),
-                New LengthRule(CustomerColumns.顧客名, 50, 1),
-                New LengthRule(CustomerColumns.住所, 100),
-                New LengthRule(CustomerColumns.電話番号, 13)
-            },
-            .DateColumns = {
-                New ColumnDefinition(CustomerColumns.登録日),
-                New ColumnDefinition(CustomerColumns.更新日)
+                New LengthRule(FileLayout.顧客コード, 10),
+                New LengthRule(FileLayout.支店コード, 3),
+                New LengthRule(FileLayout.顧客名, 50, 1),
+                New LengthRule(FileLayout.住所, 100),
+                New LengthRule(FileLayout.電話番号, 13)
             }
         }
     End Function

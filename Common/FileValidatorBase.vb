@@ -91,75 +91,38 @@ Public MustInherit Class FileValidatorBase
     ' ==========================================
     ' ファイル形式判定
     ' ==========================================
-    
     Private Function DetectFileFormat(filePath As String) As FileFormatInfo
-        Dim ext = Path.GetExtension(filePath).ToLower()
-        Dim format As New FileFormatInfo
+        ' レイアウト定義で区切り文字が指定されているかチェック（必須）
+        If String.IsNullOrEmpty(currentFileDefinition.Delimiter) Then
+            Throw New Exception("レイアウト定義で区切り文字（Delimiter）が指定されていません")
+        End If
         
-        Select Case ext
-            Case ".csv"
-                format.Extension = ".csv"
-                format.Delimiter = ","
-                format.Name = "CSV"
-                
-            Case ".tsv"
-                format.Extension = ".tsv"
-                format.Delimiter = vbTab
-                format.Name = "TSV"
-                
-            Case ".txt"
-                ' txtの場合は中身を見て判定
-                format = DetectDelimiterFromContent(filePath)
-                
+        ' 入力ファイルの拡張子を取得
+        Dim ext = Path.GetExtension(filePath).ToLower()
+        
+        ' 形式名を決定
+        Dim formatName As String
+        Select Case currentFileDefinition.Delimiter
+            Case ","
+                formatName = "CSV"
+            Case vbTab
+                formatName = "TSV"
             Case Else
-                ' デフォルトはTSV
-                format.Extension = ".tsv"
-                format.Delimiter = vbTab
-                format.Name = "TSV"
+                formatName = "カスタム区切り文字"
         End Select
         
-        Return format
+        Return New FileFormatInfo With {
+            .Extension = If(String.IsNullOrEmpty(ext), ".txt", ext),
+            .Delimiter = currentFileDefinition.Delimiter,
+            .Name = formatName
+        }
     End Function
+
     
-    Private Function DetectDelimiterFromContent(filePath As String) As FileFormatInfo
-        Dim format As New FileFormatInfo
-        
-        Try
-            Dim firstLine = File.ReadLines(filePath, Encoding.UTF8).FirstOrDefault()
-            
-            If firstLine IsNot Nothing Then
-                Dim tabCount = firstLine.Count(Function(c) c = vbTab(0))
-                Dim commaCount = firstLine.Count(Function(c) c = ","c)
-                
-                If tabCount > commaCount Then
-                    format.Delimiter = vbTab
-                    format.Extension = ".tsv"
-                    format.Name = "TSV"
-                Else
-                    format.Delimiter = ","
-                    format.Extension = ".csv"
-                    format.Name = "CSV"
-                End If
-            Else
-                ' デフォルト
-                format.Delimiter = vbTab
-                format.Extension = ".tsv"
-                format.Name = "TSV"
-            End If
-        Catch ex As Exception
-            ' エラー時はデフォルト
-            format.Delimiter = vbTab
-            format.Extension = ".tsv"
-            format.Name = "TSV"
-        End Try
-        
-        Return format
-    End Function
     
     ' ==========================================
     ' ファイル読み込み
     ' ==========================================
-    
     Private Function ReadFile(filePath As String) As List(Of String)
         Dim lines As New List(Of String)
         
@@ -273,6 +236,29 @@ Public MustInherit Class FileValidatorBase
     End Function
 
     ' ==========================================
+    ' 列数チェック
+    ' ==========================================
+    Private Function ValidateColumnCount(fields() As String, result As RowValidationResult) As Boolean
+        If currentFileDefinition.ExpectedColumnCount <= 0 Then
+            Return True  ' 列数チェックが設定されていない場合はスキップ
+        End If
+        
+        If fields.Length < currentFileDefinition.ExpectedColumnCount Then
+            result.Errors.Add(New ValidationError With {
+                .LineNumber = result.LineNumber,
+                .ColumnIndex = -1,
+                .ColumnName = "",
+                .ErrorType = "列数不足",
+                .ErrorMessage = $"列数が不足しています（期待値: {currentFileDefinition.ExpectedColumnCount}列、実際: {fields.Length}列）",
+                .RawValue = ""
+            })
+            Return False
+        End If
+        
+        Return True
+    End Function
+
+    ' ==========================================
     ' 行のバリデーション（メインロジック）
     ' ==========================================
     
@@ -284,6 +270,12 @@ Public MustInherit Class FileValidatorBase
         
         ' キー項目を抽出
         ExtractKeyValues(fields, result)
+
+        ' ステップ0: 列数チェック（最優先）
+        If Not ValidateColumnCount(fields, result) Then
+            Return result  ' 列数不足なら他のチェック不要
+        End If
+    
         
         ' ステップ1: スキップ判定
         If ShouldSkipValidation(fields) Then

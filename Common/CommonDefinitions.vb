@@ -116,6 +116,10 @@ Public Class FileDefinition
     Public Property Name As String
     ''' <summary>出力ファイル名のプレフィックス（例: "customer" → customer_OK_data.csv）</summary>
     Public Property OutputFileName As String
+    ''' <summary>区切り文字（"," or vbTab）※未設定時は拡張子から自動判定</summary>
+    Public Property Delimiter As String
+    ''' <summary>期待される列数</summary>
+    Public Property ExpectedColumnCount As Integer
     ''' <summary>キー項目の定義（エラーログに表示される項目）</summary>
     Public Property KeyColumns As ColumnDefinition()
     ''' <summary>一意性制約の対象列（複合キーの場合は複数指定）</summary>
