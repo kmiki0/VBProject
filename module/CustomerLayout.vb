@@ -1,3 +1,14 @@
+Public Enum CustomerColumns
+    顧客コード = 0
+    支店コード = 1
+    顧客名 = 2
+    住所 = 3
+    電話番号 = 4
+    登録日 = 5
+    更新日 = 6
+    削除フラグ = 7
+End Enum
+
 ' ==========================================
 ' CustomerLayout.vb
 ' 顧客マスタファイルのレイアウト定義
@@ -18,25 +29,28 @@ Public Class CustomerLayout
             .Name = "顧客マスタ",
             .OutputFileName = "customer",
             .KeyColumns = {
-                New ColumnDefinition(0, "顧客コード"),
-                New ColumnDefinition(1, "支店コード")
+                New ColumnDefinition(CustomerColumns.顧客コード),
+                New ColumnDefinition(CustomerColumns.支店コード)
             },
-            .UniqueColumns = {0, 1},
+            .UniqueColumns = {
+                CustomerColumns.顧客コード,
+                CustomerColumns.支店コード
+            },
             .RequiredColumns = {
-                New ColumnDefinition(0, "顧客コード"),
-                New ColumnDefinition(1, "支店コード"),
-                New ColumnDefinition(2, "顧客名")
+                New ColumnDefinition(CustomerColumns.顧客コード),
+                New ColumnDefinition(CustomerColumns.支店コード),
+                New ColumnDefinition(CustomerColumns.顧客名)
             },
             .LengthRules = {
-                New LengthRule(0, "顧客コード", 10),
-                New LengthRule(1, "支店コード", 3),
-                New LengthRule(2, "顧客名", 50, 1),
-                New LengthRule(3, "住所", 100),
-                New LengthRule(4, "電話番号", 13)
+                New LengthRule(CustomerColumns.顧客コード, 10),
+                New LengthRule(CustomerColumns.支店コード, 3),
+                New LengthRule(CustomerColumns.顧客名, 50, 1),
+                New LengthRule(CustomerColumns.住所, 100),
+                New LengthRule(CustomerColumns.電話番号, 13)
             },
             .DateColumns = {
-                New ColumnDefinition(5, "登録日"),
-                New ColumnDefinition(6, "更新日")
+                New ColumnDefinition(CustomerColumns.登録日),
+                New ColumnDefinition(CustomerColumns.更新日)
             }
         }
     End Function
