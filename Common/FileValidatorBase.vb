@@ -12,10 +12,11 @@ Public MustInherit Class FileValidatorBase
     ' ==========================================
     Protected NGResults As New List(Of RowValidationResult)
     Protected OKData As New List(Of String)
-    Private uniqueKeyCache As New Dictionary(Of String, Integer)  ' キー→行番号のマップ
+    Private uniqueKeyCache As New Dictionary(Of String, Integer)  ' キー→最初の行番号のマップ
+    Private duplicateKeys As New HashSet(Of String)  ' 重複しているキーのセット
     Private inputFileInfo As FileFormatInfo
     Private currentFileDefinition As FileDefinition
-    
+
     ' ==========================================
     ' 派生クラスで実装が必要な抽象メソッド
     ' ==========================================
@@ -200,19 +201,35 @@ Public MustInherit Class FileValidatorBase
     ' ==========================================
     ' 一意性チェック用のキー収集
     ' ==========================================
-    
     Private Sub CollectUniqueKeys(lines As List(Of String))
         If currentFileDefinition.UniqueColumns Is Nothing OrElse 
            currentFileDefinition.UniqueColumns.Length = 0 Then
             Return
         End If
         
+        Dim keyCount As New Dictionary(Of String, Integer)  ' キー→出現回数
+        
         For i As Integer = 0 To lines.Count - 1
             Dim fields = SplitLine(lines(i), inputFileInfo.Delimiter)
             Dim key = BuildUniqueKey(fields)
             
+            ' 出現回数をカウント
+            If keyCount.ContainsKey(key) Then
+                keyCount(key) += 1
+            Else
+                keyCount(key) = 1
+            End If
+            
+            ' 最初に出現した行番号を記録（エラーメッセージ用）
             If Not uniqueKeyCache.ContainsKey(key) Then
-                uniqueKeyCache(key) = i + 1  ' 最初に出現した行番号を記録
+                uniqueKeyCache(key) = i + 1
+            End If
+        Next
+        
+        ' 2回以上出現したキーを重複キーとして記録
+        For Each kv In keyCount
+            If kv.Value > 1 Then
+                duplicateKeys.Add(kv.Key)
             End If
         Next
     End Sub
@@ -323,7 +340,6 @@ Public MustInherit Class FileValidatorBase
     ' ==========================================
     ' 一意性チェック
     ' ==========================================
-    
     Private Function ValidateUniqueness(fields() As String, result As RowValidationResult) As Boolean
         If currentFileDefinition.UniqueColumns Is Nothing OrElse 
            currentFileDefinition.UniqueColumns.Length = 0 Then
@@ -332,21 +348,20 @@ Public MustInherit Class FileValidatorBase
         
         Dim key = BuildUniqueKey(fields)
         
-        ' 最初に出現した行番号を取得
-        Dim firstLineNo As Integer
-        If uniqueKeyCache.TryGetValue(key, firstLineNo) Then
-            ' 自分自身の行番号でなければ重複
-            If firstLineNo <> result.LineNumber Then
-                result.Errors.Add(New ValidationError With {
-                    .LineNumber = result.LineNumber,
-                    .ColumnIndex = -1,
-                    .ColumnName = "",
-                    .ErrorType = "一意性制約",
-                    .ErrorMessage = $"重複データ（初出: {firstLineNo}行目）",
-                    .RawValue = key
-                })
-                Return False
-            End If
+        ' このキーが重複キーセットに含まれている場合、すべてエラー
+        If duplicateKeys.Contains(key) Then
+            Dim firstLineNo As Integer
+            uniqueKeyCache.TryGetValue(key, firstLineNo)
+            
+            result.Errors.Add(New ValidationError With {
+                .LineNumber = result.LineNumber,
+                .ColumnIndex = -1,
+                .ColumnName = "",
+                .ErrorType = "一意性制約",
+                .ErrorMessage = $"重複データ（初出: {firstLineNo}行目）",
+                .RawValue = key
+            })
+            Return False
         End If
         
         Return True

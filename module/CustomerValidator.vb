@@ -16,62 +16,52 @@ Public Class CustomerValidator
     End Function
     
     ' ==========================================
-    ' スキップ条件（カスタムロジック1）
+    ' スキップする場合(Defalt: False)
     ' ==========================================
     Protected Overrides Function ShouldSkipValidation(fields() As String) As Boolean
-        ' 想定レイアウト:
-        ' 0:顧客コード, 1:支店コード, 2:顧客名, 3:住所, 4:電話番号, 
-        ' 5:登録日, 6:更新日, 7:削除フラグ
-        
-        ' 削除フラグ（7列目）が"X"または"削除"の場合はスキップ
-        If fields.Length > 7 Then
-            Dim deleteFlag = fields(7).Trim()
-            If deleteFlag = "X" OrElse deleteFlag = "削除" Then
-                Return True
-            End If
+        ' Enumから列インデックスを取得
+        Dim skipIndex = Convert.ToInt32(FileLayout.削除フラグ)
+
+        ' 削除フラグ（7列目）が"X"の場合はスキップ
+        Dim deleteFlag = fields(skipIndex).Trim()
+        If deleteFlag = "X" Then
+            Return True
         End If
         
         Return False
     End Function
     
     ' ==========================================
-    ' カスタムバリデーション（カスタムロジック2）
+    ' カスタムバリデーション
     ' ==========================================
     Protected Overrides Sub ValidateCustomRules(fields() As String, result As RowValidationResult)
-        ' 顧客コードのフォーマットチェック
-        ValidateCustomerCodeFormat(fields, result)
+        ValidateDateFormat(fields, result, FileLayout.登録日)
     End Sub
     
-    ' 顧客コードのフォーマットチェック（例: "C"で始まる必要がある）
-    Private Sub ValidateCustomerCodeFormat(fields() As String, result As RowValidationResult)
-        If fields.Length <= 0 OrElse String.IsNullOrWhiteSpace(fields(0)) Then
-            Return  ' 必須チェックで既にエラーになっている
-        End If
+    ''' <summary>
+    ''' 日付形式チェック（yyyyMMdd形式）
+    ''' </summary>
+    Private Sub ValidateDateFormat(fields() As String, result As RowValidationResult, columnEnum As [Enum])
+        Dim columnIndex = Convert.ToInt32(columnEnum)
+        Dim columnName = [Enum].GetName(columnEnum.GetType(), columnEnum)
         
-        Dim customerCode = fields(0)
+        If columnIndex >= fields.Length Then Return
         
-        ' "C"で始まるかチェック
-        If Not customerCode.StartsWith("C") Then
+        Dim value = fields(columnIndex)
+        If String.IsNullOrWhiteSpace(value) Then Return
+        
+        Dim dateValue As Date
+        ' yyyyMMdd形式で厳密にチェック
+        If Not Date.TryParseExact(value, "yyyyMMdd", Nothing, DateTimeStyles.None, dateValue) Then
             result.Errors.Add(New ValidationError With {
                 .LineNumber = result.LineNumber,
-                .ColumnIndex = 0,
-                .ColumnName = "顧客コード",
-                .ErrorType = "形式",
-                .ErrorMessage = "顧客コードは'C'で始まる必要があります",
-                .RawValue = customerCode
-            })
-        End If
-        
-        ' 英数字のみかチェック
-        If Not Regex.IsMatch(customerCode, "^[A-Za-z0-9]+$") Then
-            result.Errors.Add(New ValidationError With {
-                .LineNumber = result.LineNumber,
-                .ColumnIndex = 0,
-                .ColumnName = "顧客コード",
-                .ErrorType = "形式",
-                .ErrorMessage = "顧客コードは英数字のみで入力してください",
-                .RawValue = customerCode
+                .ColumnIndex = columnIndex,
+                .ColumnName = columnName,
+                .ErrorType = "日付形式",
+                .ErrorMessage = "日付形式が不正です（形式: yyyyMMdd 例: 20250115）",
+                .RawValue = value
             })
         End If
     End Sub
+
 End Class

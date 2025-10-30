@@ -21,7 +21,7 @@ Public Class CustomerLayout
         Return New FileDefinition With {
             .Name = "顧客マスタ",
             .OutputFileName = "customer",
-            .Delimiter = vbTab
+            .Delimiter = vbTab,
             .ExpectedColumnCount = 8,  
             .KeyColumns = {
                 New ColumnDefinition(FileLayout.顧客コード),
