@@ -8,17 +8,17 @@
 ' 使い所: バリデーションで引っかかった時にこのオブジェクトを生成
 ' ==========================================
 Public Class ValidationError
-    ''' <summary>行番号</summary>
+    ''' <summary> 行番号 </summary>
     Public Property LineNumber As Integer
-    ''' <summary>列インデックス（0始まり）</summary>
+    ''' <summary> 列インデックス（0始まり） </summary>
     Public Property ColumnIndex As Integer
-    ''' <summary>列名</summary>
+    ''' <summary> 列名 </summary>
     Public Property ColumnName As String
-    ''' <summary>エラー種別（必須、桁数、日付形式、一意性、形式、範囲、論理など）</summary>
+    ''' <summary> エラー種別（必須、桁数、日付形式、一意性、形式、範囲、論理など） </summary>
     Public Property ErrorType As String
-    ''' <summary>エラーメッセージ</summary>
+    ''' <summary> エラーメッセージ </summary>
     Public Property ErrorMessage As String
-    ''' <summary>エラーが発生した値</summary>
+    ''' <summary> エラーが発生した値 </summary>
     Public Property RawValue As String
 End Class
 
@@ -28,23 +28,23 @@ End Class
 ' 使い所: 各行をチェックした結果を格納
 ' ==========================================
 Public Class RowValidationResult
-    ''' <summary>行番号</summary>
+    ''' <summary> 行番号 </summary>
     Public Property LineNumber As Integer
-    ''' <summary>元データ（1行分の文字列）</summary>
+    ''' <summary> 元データ（1行分の文字列） </summary>
     Public Property RawData As String
-    ''' <summary>キー項目の値（キー名と値のペア）</summary>
+    ''' <summary> キー項目の値（キー名と値のペア） </summary>
     Public Property KeyValues As New Dictionary(Of String, String)
-    ''' <summary>エラーリスト（1行に複数エラーがある場合もある）</summary>
+    ''' <summary> エラーリスト（1行に複数エラーがある場合もある） </summary>
     Public Property Errors As New List(Of ValidationError)
 
-    ''' <summary>エラーがないか判定</summary>
+    ''' <summary> エラーがないか判定 </summary>
     Public ReadOnly Property IsValid As Boolean
         Get
             Return Errors.Count = 0
         End Get
     End Property
     
-    ''' <summary>キー項目を文字列で取得（ログ出力用）</summary>
+    ''' <summary> キー項目を文字列で取得（ログ出力用）</summary>
     Public Function GetKeyValueString() As String
         If KeyValues.Count = 0 Then Return ""
         
@@ -64,9 +64,9 @@ End Class
 ' 使い所: キー項目、必須項目、日付項目などの設定
 ' ==========================================
 Public Class ColumnDefinition
-    ''' <summary>列インデックス（0始まり）</summary>
+    ''' <summary> 列インデックス（0始まり） </summary>
     Public Property Index As Integer
-    ''' <summary>列名（日本語名でOK）</summary>
+    ''' <summary> 列名（日本語名でOK） </summary>
     Public Property Name As String
     
     Public Sub New()
@@ -85,13 +85,13 @@ End Class
 ' 使い所: 「顧客コードは最大10桁」などの設定
 ' ==========================================
 Public Class LengthRule
-    ''' <summary>列インデックス（0始まり）</summary>
+    ''' <summary> 列インデックス（0始まり） </summary>
     Public Property ColumnIndex As Integer
-    ''' <summary>列名</summary>
+    ''' <summary> 列名 </summary>
     Public Property ColumnName As String
-    ''' <summary>最大桁数</summary>
+    ''' <summary> 最大桁数 </summary>
     Public Property MaxLength As Integer
-    ''' <summary>最小桁数（Nothingの場合はチェックしない）</summary>
+    ''' <summary> 最小桁数（Nothingの場合はチェックしない） </summary>
     Public Property MinLength As Integer?
     
     Public Sub New()
@@ -111,24 +111,24 @@ End Class
 ' 役割: 1つのファイルに対するすべての設定を保持
 ' 使い所: 各バリデータのGetFileDefinition()で返すオブジェクト
 ' ==========================================
-Public Class FileDefinition
-    ''' <summary>ファイル名（表示用）</summary>
+Public Class FileInfo
+    ''' <summary> ファイル名（表示用） </summary>
     Public Property Name As String
-    ''' <summary>出力ファイル名のプレフィックス（例: "customer" → customer_OK_data.csv）</summary>
+    ''' <summary> 出力ファイル名のプレフィックス（例: "customer" → customer_OK_data.csv） </summary>
     Public Property OutputFileName As String
-    ''' <summary>区切り文字（"," or vbTab）※未設定時は拡張子から自動判定</summary>
+    ''' <summary> 区切り文字（"," or vbTab）※未設定時は拡張子から自動判定 </summary>
     Public Property Delimiter As String
-    ''' <summary>期待される列数</summary>
+    ''' <summary> 期待される列数 </summary>
     Public Property ExpectedColumnCount As Integer
-    ''' <summary>キー項目の定義（エラーログに表示される項目）</summary>
+    ''' <summary> キー項目の定義（エラーログに表示される項目） </summary>
     Public Property KeyColumns As ColumnDefinition()
-    ''' <summary>一意性制約の対象列（複合キーの場合は複数指定）</summary>
+    ''' <summary> 一意性制約の対象列（複合キーの場合は複数指定） </summary>
     Public Property UniqueColumns As Integer()
-    ''' <summary>必須項目の定義</summary>
+    ''' <summary> 必須項目の定義 </summary>
     Public Property RequiredColumns As ColumnDefinition()
-    ''' <summary>桁数チェックのルール</summary>
+    ''' <summary> 桁数チェックのルール </summary>
     Public Property LengthRules As LengthRule()
-    ''' <summary>日付項目の定義</summary>
+    ''' <summary> 日付項目の定義 </summary>
     Public Property DateColumns As ColumnDefinition()
 End Class
 
@@ -138,10 +138,10 @@ End Class
 ' 使い所: ファイル読み込み時とOKデータ出力時
 ' ==========================================
 Public Class FileFormatInfo
-    ''' <summary>拡張子（例: ".csv", ".tsv"）</summary>
+    ''' <summary> 拡張子（例: ".csv", ".tsv"） </summary>
     Public Property Extension As String
-    ''' <summary>デリミタ（例: "," or vbTab）</summary>
+    ''' <summary> デリミタ（例: "," or vbTab） </summary>
     Public Property Delimiter As String
-    ''' <summary>形式名（例: "CSV", "TSV"）</summary>
+    ''' <summary> 形式名（例: "CSV", "TSV"） </summary>
     Public Property Name As String
 End Class

@@ -253,29 +253,6 @@ Public MustInherit Class FileValidatorBase
     End Function
 
     ' ==========================================
-    ' 列数チェック
-    ' ==========================================
-    Private Function ValidateColumnCount(fields() As String, result As RowValidationResult) As Boolean
-        If currentFileDefinition.ExpectedColumnCount <= 0 Then
-            Return True  ' 列数チェックが設定されていない場合はスキップ
-        End If
-        
-        If fields.Length < currentFileDefinition.ExpectedColumnCount Then
-            result.Errors.Add(New ValidationError With {
-                .LineNumber = result.LineNumber,
-                .ColumnIndex = -1,
-                .ColumnName = "",
-                .ErrorType = "列数不足",
-                .ErrorMessage = $"列数が不足しています（期待値: {currentFileDefinition.ExpectedColumnCount}列、実際: {fields.Length}列）",
-                .RawValue = ""
-            })
-            Return False
-        End If
-        
-        Return True
-    End Function
-
-    ' ==========================================
     ' 行のバリデーション（メインロジック）
     ' ==========================================
     
@@ -289,7 +266,7 @@ Public MustInherit Class FileValidatorBase
         ExtractKeyValues(fields, result)
 
         ' ステップ0: 列数チェック（最優先）
-        If Not ValidateColumnCount(fields, result) Then
+        If Not FieldValidators.ValidateColumnCount(fields, currentFileDefinition, result) Then
             Return result  ' 列数不足なら他のチェック不要
         End If
     
@@ -305,13 +282,13 @@ Public MustInherit Class FileValidatorBase
         End If
         
         ' ステップ3: 必須チェック（早期リターン）
-        If Not ValidateRequired(fields, result) Then
+        If Not FieldValidators.ValidateRequired(fields, currentFileDefinition, result) Then
             Return result  ' 必須エラーなら終了
         End If
         
-        ' ステップ4: 桁数・日付チェック（両方実行）
-        ValidateLength(fields, result)
-        ValidateDate(fields, result)
+    ' ステップ4: 桁数・日付チェック（両方実行）
+    FieldValidators.ValidateLength(fields, currentFileDefinition, result)
+    FieldValidators.ValidateDate(fields, currentFileDefinition, result)
         
         ' ステップ5: カスタムルール
         ValidateCustomRules(fields, result)
@@ -337,6 +314,7 @@ Public MustInherit Class FileValidatorBase
         Next
     End Sub
     
+
     ' ==========================================
     ' 一意性チェック
     ' ==========================================
@@ -367,114 +345,14 @@ Public MustInherit Class FileValidatorBase
         Return True
     End Function
     
-    ' ==========================================
-    ' 必須チェック
-    ' ==========================================
     
-    Private Function ValidateRequired(fields() As String, result As RowValidationResult) As Boolean
-        If currentFileDefinition.RequiredColumns Is Nothing Then
-            Return True
-        End If
-        
-        For Each reqCol In currentFileDefinition.RequiredColumns
-            If reqCol.Index >= fields.Length OrElse String.IsNullOrWhiteSpace(fields(reqCol.Index)) Then
-                result.Errors.Add(New ValidationError With {
-                    .LineNumber = result.LineNumber,
-                    .ColumnIndex = reqCol.Index,
-                    .ColumnName = reqCol.Name,
-                    .ErrorType = "必須",
-                    .ErrorMessage = "必須項目が未入力です",
-                    .RawValue = If(reqCol.Index < fields.Length, fields(reqCol.Index), "")
-                })
-                Return False  ' 必須エラーで早期リターン
-            End If
-        Next
-        
-        Return True
-    End Function
     
-    ' ==========================================
-    ' 桁数チェック
-    ' ==========================================
-    
-    Private Sub ValidateLength(fields() As String, result As RowValidationResult)
-        If currentFileDefinition.LengthRules Is Nothing Then
-            Return
-        End If
-        
-        For Each rule In currentFileDefinition.LengthRules
-            If rule.ColumnIndex >= fields.Length Then
-                Continue For
-            End If
-            
-            Dim value = fields(rule.ColumnIndex)
-            Dim length = value.Length
-            
-            ' 最大桁数チェック
-            If length > rule.MaxLength Then
-                result.Errors.Add(New ValidationError With {
-                    .LineNumber = result.LineNumber,
-                    .ColumnIndex = rule.ColumnIndex,
-                    .ColumnName = rule.ColumnName,
-                    .ErrorType = "桁数",
-                    .ErrorMessage = $"最大{rule.MaxLength}桁（現在{length}桁）",
-                    .RawValue = value
-                })
-            End If
-            
-            ' 最小桁数チェック
-            If rule.MinLength.HasValue AndAlso length < rule.MinLength.Value AndAlso length > 0 Then
-                result.Errors.Add(New ValidationError With {
-                    .LineNumber = result.LineNumber,
-                    .ColumnIndex = rule.ColumnIndex,
-                    .ColumnName = rule.ColumnName,
-                    .ErrorType = "桁数",
-                    .ErrorMessage = $"最小{rule.MinLength.Value}桁（現在{length}桁）",
-                    .RawValue = value
-                })
-            End If
-        Next
-    End Sub
-    
-    ' ==========================================
-    ' 日付形式チェック
-    ' ==========================================
-    
-    Private Sub ValidateDate(fields() As String, result As RowValidationResult)
-        If currentFileDefinition.DateColumns Is Nothing Then
-            Return
-        End If
-        
-        For Each dateCol In currentFileDefinition.DateColumns
-            If dateCol.Index >= fields.Length Then
-                Continue For
-            End If
-            
-            Dim value = fields(dateCol.Index)
-            
-            ' 空欄はスキップ（必須チェックで別途チェック済み）
-            If String.IsNullOrWhiteSpace(value) Then
-                Continue For
-            End If
-            
-            Dim dateValue As Date
-            If Not Date.TryParse(value, dateValue) Then
-                result.Errors.Add(New ValidationError With {
-                    .LineNumber = result.LineNumber,
-                    .ColumnIndex = dateCol.Index,
-                    .ColumnName = dateCol.Name,
-                    .ErrorType = "日付形式",
-                    .ErrorMessage = "日付形式が不正です（例: 2025/01/15）",
-                    .RawValue = value
-                })
-            End If
-        Next
-    End Sub
-    
+
+#Region "出力処理"
+
     ' ==========================================
     ' OKデータ出力
     ' ==========================================
-    
     Private Sub OutputOKData(outputDir As String)
         If OKData.Count = 0 Then
             Console.WriteLine("OKデータ: 0件（出力なし）")
@@ -500,7 +378,6 @@ Public MustInherit Class FileValidatorBase
     ' ==========================================
     ' NGログ出力
     ' ==========================================
-    
     Private Sub OutputNGLog(outputDir As String)
         If NGResults.Count = 0 Then
             Console.WriteLine("NGデータ: 0件（出力なし）")
@@ -559,5 +436,7 @@ Public MustInherit Class FileValidatorBase
             Console.WriteLine($"NGログ出力エラー: {ex.Message}")
         End Try
     End Sub
+
+#End Region
     
 End Class
